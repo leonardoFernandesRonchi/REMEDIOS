@@ -20,7 +20,7 @@ const MainLayout: React.FC = () => {
           justifyContent: "space-between",
           alignItems: "center",
           padding: "16px 24px",
-          background: "#222",
+          background: "#2882cb",
           color: "#fff",
         }}
       >
