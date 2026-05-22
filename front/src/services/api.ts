@@ -124,6 +124,13 @@ export const createMedication = async (data: MedicationData) => {
   return response.data;
 };
 
+// SEND TO DISPENSER
+export const sendToDispenser = async (value: number) => {
+  const response = await api.post("/auth/send-to-dispenser", { value });
+  return response.data;
+};
+
+
 // UPDATE
 export const updateMedication = async (
   id: number | string,

@@ -7,6 +7,11 @@ use App\Models\Medication;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use App\Services\MqttService;
+use PhpMqtt\Client\MqttClient;
+use PhpMqtt\Client\ConnectionSettings;
+
+
 
 class MedicationController extends Controller
 {
@@ -52,4 +57,42 @@ class MedicationController extends Controller
             'message' => 'Medicação removida com sucesso'
         ]);
     }
+
+   public function sendToDispenser(Request $request): JsonResponse
+{
+    $request->validate([
+        'value' => 'required|integer|min:1|max:9'
+    ]);
+
+    $server   = env('MQTT_HOST');
+    $port     = env('MQTT_PORT');
+    $username = env('MQTT_USERNAME');
+    $password = env('MQTT_PASSWORD');
+
+    $clientId = 'laravel-client-' . uniqid();
+
+    $mqtt = new MqttClient($server, $port, $clientId);
+
+    $connectionSettings = (new ConnectionSettings)
+        ->setUsername($username)
+        ->setPassword($password)
+        ->setUseTls(true);
+
+    $mqtt->connect($connectionSettings, true);
+
+    $mqtt->publish(
+        'remedios/dispenser',
+        (string) $request->value,
+        0
+    );
+
+    $mqtt->disconnect();
+
+    return response()->json([
+        'message' => 'Valor enviado com sucesso',
+        'value' => $request->value
+    ]);
+}
+
+
 }

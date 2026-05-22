@@ -5,6 +5,8 @@ import * as yup from "yup";
 import {
   createMedication,
   getMedications,
+  sendToDispenser,
+  deleteMedication,
 } from "../services/api";
 
 // =========================
@@ -40,6 +42,7 @@ const medicationSchema = yup.object({
 });
 
 const Home: React.FC = () => {
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [medications, setMedications] = useState<
@@ -177,218 +180,237 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <div className="p-8">
-      {/* HEADER */}
-      <div className="flex items-center justify-between w-full">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Início
-          </h1>
+  <div className="min-h-screen bg-gray-100 p-6">
 
-          <p className="mt-2 text-gray-600">
-            Bem-vindo ao sistema.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700"
-        >
-          Novo Medicamento
-        </button>
-      </div>
-
-      {/* GRID */}
-      {/* GRID */}
-<div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-  {positions.map((position) => {
-    // pega todos da posição
-    const medicationsInPosition = medications.filter(
-      (med) =>
-        med.posicionamentoMotor === position
-    );
-
-    // primeiro da fila
-    const firstMedication =
-      medicationsInPosition[0];
-
-    return (
-      <div
-        key={position}
-        className="min-h-[220px] rounded-2xl border border-gray-200 bg-white p-5 shadow-md"
+      {/* BOTÃO ADICIONAR */}
+    <div className="mb-6 flex justify-end">
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700"
       >
-        {/* HEADER */}
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-400">
-            Posição {position}
-          </span>
+        + Novo Medicamento
+      </button>
+    </div>
+    {loading && (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-4">
+      
+      {/* SPINNER */}
+      <div className="h-16 w-16 animate-spin rounded-full border-4 border-white border-t-transparent" />
 
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-            #{position}
-          </span>
-        </div>
+      <p className="text-lg font-semibold text-white">
+        Carregando...
+      </p>
+    </div>
+  </div>
+)}
+    {/* GRID */}
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 9 }, (_, index) => {
+        const position = index + 1;
 
-        {/* MEDICATION */}
-        {firstMedication ? (
-          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-            <h3 className="text-xl font-bold text-gray-800">
-              {firstMedication.name}
-            </h3>
+        const medicationsInPosition = medications.filter(
+          (m) => m.posicionamentoMotor === position.toString()
+        );
 
-            <p className="mt-2 text-gray-600">
-              Quantidade:{" "}
-              {firstMedication.quantity}
-            </p>
+        const firstMedication = medicationsInPosition[0];
 
-            {/* quantidade escondida atrás */}
-            {medicationsInPosition.length > 1 && (
-              <p className="mt-3 text-sm text-gray-400">
-                +{" "}
-                {medicationsInPosition.length -
-                  1}{" "}
-                atrás
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex h-32 items-center justify-center">
-            <p className="text-gray-400">
-              Vazio
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  })}
-</div>
+        return (
+          <div
+            key={position}
+            className="min-h-[220px] rounded-2xl border border-gray-200 bg-white p-5 shadow-md"
+          >
 
-      {/* MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          
             {/* HEADER */}
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Novo Medicamento
-              </h2>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-400">
+                Posição {position}
+              </span>
 
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-2xl text-gray-500 hover:text-gray-700"
-              >
-                ×
-              </button>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                #{position}
+              </span>
             </div>
 
-            {/* FORM */}
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4"
-            >
-              {/* NAME */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Nome
-                </label>
+            {/* MEDICATION */}
+            {firstMedication ? (
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                
+                {/* TOPO */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      {firstMedication.name}
+                    </h3>
 
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
+                    <p className="mt-2 text-gray-600">
+                      Quantidade: {firstMedication.quantity}
+                    </p>
+                  </div>
 
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.name}
+                  {/* BOTÃO */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await sendToDispenser(position);
+
+                        await deleteMedication(firstMedication.id);
+
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        await loadMedications();
+                        setLoading(false);
+                      }
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 text-sm font-bold text-white transition hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* quantidade escondida atrás */}
+                {medicationsInPosition.length > 1 && (
+                  <p className="mt-3 text-sm text-gray-400">
+                    + {medicationsInPosition.length - 1} atrás
                   </p>
                 )}
               </div>
-
-              {/* QUANTITY */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Quantidade
-                </label>
-
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-
-                {errors.quantity && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.quantity}
-                  </p>
-                )}
+            ) : (
+              <div className="flex h-32 items-center justify-center">
+                <p className="text-gray-400">
+                  Vazio
+                </p>
               </div>
-
-              {/* POSITION */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Posição
-                </label>
-
-                <select
-                  name="posicionamentoMotor"
-                  value={
-                    formData.posicionamentoMotor
-                  }
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                >
-                  <option value="">
-                    Selecione
-                  </option>
-
-                  {positions.map((position) => (
-                    <option
-                      key={position}
-                      value={position}
-                    >
-                      {position}
-                    </option>
-                  ))}
-                </select>
-
-                {errors.posicionamentoMotor && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {
-                      errors.posicionamentoMotor
-                    }
-                  </p>
-                )}
-              </div>
-
-              {/* BUTTONS */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-lg bg-green-600 py-2 font-medium text-white transition hover:bg-green-700"
-                >
-                  Salvar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsModalOpen(false)
-                  }
-                  className="flex-1 rounded-lg bg-gray-200 py-2 font-medium text-gray-700 transition hover:bg-gray-300"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
-  );
+
+    {/* MODAL */}
+    {isModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          {/* HEADER */}
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-800">
+              Novo Medicamento
+            </h2>
+
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="text-2xl text-gray-500 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* FORM */}
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+          >
+            {/* NAME */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Nome
+              </label>
+
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
+            {/* QUANTITY */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Quantidade
+              </label>
+
+              <input
+                type="number"
+                name="quantity"
+                value={formData.quantity}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+
+              {errors.quantity && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.quantity}
+                </p>
+              )}
+            </div>
+
+            {/* POSITION */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Posição
+              </label>
+
+              <select
+                name="posicionamentoMotor"
+                value={formData.posicionamentoMotor}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="">
+                  Selecione
+                </option>
+
+                {positions.map((position) => (
+                  <option
+                    key={position}
+                    value={position}
+                  >
+                    {position}
+                  </option>
+                ))}
+              </select>
+
+              {errors.posicionamentoMotor && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.posicionamentoMotor}
+                </p>
+              )}
+            </div>
+
+            {/* BUTTONS */}
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                className="flex-1 rounded-lg bg-green-600 py-2 font-medium text-white transition hover:bg-green-700"
+              >
+                Salvar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 rounded-lg bg-gray-200 py-2 font-medium text-gray-700 transition hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+  </div>
+);
 };
 
 export default Home;
